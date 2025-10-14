@@ -4,7 +4,6 @@ import com.exemple.apipagamento.portalchurras.domain.entities.MenuCategory;
 import com.exemple.apipagamento.portalchurras.domain.entities.MenuItem;
 import com.exemple.apipagamento.portalchurras.domain.ports.MenuItemRepository;
 import com.exemple.apipagamento.portalchurras.domain.usecases.MenuItemUseCases;
-import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

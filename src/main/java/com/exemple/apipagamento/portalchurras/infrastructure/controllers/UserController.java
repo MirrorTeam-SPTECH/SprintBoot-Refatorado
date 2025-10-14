@@ -7,7 +7,6 @@ import com.exemple.apipagamento.portalchurras.domain.entities.User;
 import com.exemple.apipagamento.portalchurras.domain.entities.UserRole;
 import com.exemple.apipagamento.portalchurras.domain.usecases.UserUseCases;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;

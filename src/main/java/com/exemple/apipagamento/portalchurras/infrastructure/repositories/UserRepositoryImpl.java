@@ -102,4 +102,9 @@ public class UserRepositoryImpl implements UserRepository {
         }
         return jpaRepository.findByNameOrEmailContaining(searchTerm.trim());
     }
+
+    @Override
+    public boolean existsById(Long userId) {
+        throw new UnsupportedOperationException("Unimplemented method 'existsById'");
+    }
 }

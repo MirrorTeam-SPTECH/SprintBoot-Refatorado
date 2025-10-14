@@ -12,6 +12,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class MercadoPagoGateway implements PaymentGateway {
 
     private final RestTemplate restTemplate;
@@ -141,16 +142,19 @@ public class MercadoPagoGateway implements PaymentGateway {
 
             ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, entity, Map.class);
 
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                PaymentGatewayResponse result = new PaymentGatewayResponse();
-                result.setSuccess(true);
-                result.setExternalPaymentId(externalPaymentId);
-                result.setStatus((String) response.getBody().get("status"));
-                result.setRawResponse(response.getBody());
-                return result;
-            } else {
-                return PaymentGatewayResponse.error("Resposta inválida do Mercado Pago ao consultar status");
+            if (response.getStatusCode().is2xxSuccessful()) {
+                Map<String, Object> body = response.getBody();
+                if (body != null) {
+                    PaymentGatewayResponse result = new PaymentGatewayResponse();
+                    result.setSuccess(true);
+                    result.setExternalPaymentId(externalPaymentId);
+                    result.setStatus((String) body.get("status"));
+                    result.setRawResponse(body);
+                    return result;
+                }
             }
+            
+            return PaymentGatewayResponse.error("Resposta inválida do Mercado Pago ao consultar status");
 
         } catch (Exception e) {
             return PaymentGatewayResponse.error("Erro ao consultar status: " + e.getMessage());

@@ -16,6 +16,7 @@ public interface UserRepository {
     void deleteById(Long id);
     long count();
     long countByRole(UserRole role);
+    boolean existsById(Long userId);
 }
 
 

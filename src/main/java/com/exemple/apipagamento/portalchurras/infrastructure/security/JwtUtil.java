@@ -3,8 +3,10 @@ package com.exemple.apipagamento.portalchurras.infrastructure.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
@@ -15,11 +17,31 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
-    @Value("${jwt.secret:myVerySecureSecretKeyForJWTTokens123456789}")
+    @Value("${jwt.secret:#{null}}")
     private String secret;
 
     @Value("${jwt.expiration:86400000}") // 24 horas em ms
     private long jwtExpiration;
+
+    /**
+     * Valida que o JWT secret foi configurado obrigatoriamente.
+     * Segurança: Previne uso da aplicação com secret padrão.
+     */
+    @PostConstruct
+    public void validateConfiguration() {
+        if (!StringUtils.hasText(secret)) {
+            throw new IllegalStateException(
+                "SECURITY ERROR: jwt.secret is mandatory! " +
+                "Please set JWT_SECRET environment variable or jwt.secret property. " +
+                "Never use default secrets in production!"
+            );
+        }
+        if (secret.length() < 32) {
+            throw new IllegalStateException(
+                "SECURITY ERROR: jwt.secret must be at least 32 characters long for HS256 algorithm!"
+            );
+        }
+    }
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes());
