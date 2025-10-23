@@ -19,7 +19,8 @@ public class CreateOrderRequest {
     @Size(max = 20, message = "Telefone deve ter no máximo 20 caracteres")
     private String customerPhone;
 
-    @DecimalMin(value = "0.0", message = "Total não pode ser negativo")
+    @DecimalMin(value = "0.0", inclusive = true, message = "Total não pode ser negativo")
+    @Digits(integer = 10, fraction = 2, message = "Total deve ter no máximo 10 dígitos inteiros e 2 decimais")
     private BigDecimal total = BigDecimal.ZERO;
 
     @Size(max = 500, message = "Observações devem ter no máximo 500 caracteres")

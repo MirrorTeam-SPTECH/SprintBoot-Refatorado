@@ -3,6 +3,8 @@ package com.exemple.apipagamento.portalchurras.infrastructure.controllers;
 import com.exemple.apipagamento.portalchurras.domain.usecases.PaymentUseCases;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,9 +13,10 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/webhooks")
 @Tag(name = "Webhooks", description = "API para recebimento de webhooks")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})
 public class WebhookController {
 
+    private static final Logger logger = LoggerFactory.getLogger(WebhookController.class);
+    
     private final PaymentUseCases paymentUseCases;
 
     public WebhookController(PaymentUseCases paymentUseCases) {
@@ -24,7 +27,7 @@ public class WebhookController {
     @Operation(summary = "Receber webhook do Mercado Pago")
     public ResponseEntity<?> receiveMercadoPagoWebhook(@RequestBody Map<String, Object> payload) {
         try {
-            System.out.println("Webhook Mercado Pago recebido: " + payload);
+            logger.info("Webhook Mercado Pago recebido: {}", payload);
 
             // Processar webhook
             paymentUseCases.processWebhook(payload);
@@ -32,10 +35,10 @@ public class WebhookController {
             return ResponseEntity.ok().build();
 
         } catch (IllegalArgumentException e) {
-            System.err.println("Webhook inválido: " + e.getMessage());
+            logger.warn("Webhook inválido: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
-            System.err.println("Erro ao processar webhook: " + e.getMessage());
+            logger.error("Erro ao processar webhook", e);
             return ResponseEntity.internalServerError().build();
         }
     }

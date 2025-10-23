@@ -1,12 +1,13 @@
 package com.exemple.apipagamento.portalchurras.infrastructure.messaging;
 
-import com.exemple.apipagamento.portalchurras.infrastructure.messaging.consumers.OrderStatusChangeEvent;
 import com.exemple.apipagamento.portalchurras.infrastructure.messaging.events.*;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 @Service
+@ConditionalOnProperty(name = "spring.rabbitmq.enabled", havingValue = "true", matchIfMissing = true)
 public class OrderEventPublisher {
 
     private final RabbitTemplate rabbitTemplate;

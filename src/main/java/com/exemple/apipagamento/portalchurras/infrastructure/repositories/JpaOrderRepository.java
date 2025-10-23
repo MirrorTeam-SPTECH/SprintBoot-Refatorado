@@ -16,7 +16,8 @@ public interface JpaOrderRepository extends JpaRepository<Order, Long> {
 
     List<Order> findByStatus(OrderStatus status);
 
-    List<Order> findByCustomerEmail(String customerEmail);
+    @Query("SELECT o FROM Order o WHERE o.customer.email = :email ORDER BY o.createdAt DESC")
+    List<Order> findByCustomerEmail(@Param("email") String customerEmail);
 
     List<Order> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 
@@ -38,5 +39,6 @@ public interface JpaOrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.status != 'CANCELLED' AND o.createdAt >= :startDate")
     Double sumTotalSinceDate(@Param("startDate") LocalDateTime startDate);
 
-    boolean existsByCustomerEmailAndStatus(String customerEmail, OrderStatus status);
+    @Query("SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END FROM Order o WHERE o.customer.email = :email AND o.status = :status")
+    boolean existsByCustomerEmailAndStatus(@Param("email") String customerEmail, @Param("status") OrderStatus status);
 }

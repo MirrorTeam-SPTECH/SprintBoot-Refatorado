@@ -23,7 +23,6 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/menu-items")
 @Tag(name = "Menu Items", description = "API para gerenciamento do cardápio")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})
 public class MenuItemController {
 
     private final MenuItemUseCases menuItemUseCases;

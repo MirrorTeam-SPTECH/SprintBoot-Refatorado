@@ -24,7 +24,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/orders")
 @Tag(name = "Orders", description = "API para gerenciamento de pedidos")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})
 public class OrderController {
 
     private final OrderUseCases orderUseCases;
@@ -244,13 +243,24 @@ public class OrderController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('EMPLOYEE')")
-    @Operation(summary = "Listar todos os pedidos",
-            security = @SecurityRequirement(name = "Bearer"))
+    @Operation(summary = "Listar todos os pedidos (com paginação sugerida para implementação futura)",
+            security = @SecurityRequirement(name = "Bearer"),
+            description = "Retorna todos os pedidos. Para grandes volumes, considere adicionar Pageable como parâmetro.")
     public ResponseEntity<?> getAllOrders() {
         try {
             List<Order> orders = orderUseCases.findAllOrders();
+            
+            // TODO: Implementar paginação quando necessário
+            // Exemplo: Page<Order> orders = orderUseCases.findAllOrders(pageable);
+            // return ResponseEntity.ok(orders.map(orderMapper::toDTO));
+            
             List<OrderDTO> orderDTOs = orderMapper.toDTOList(orders);
-            return ResponseEntity.ok(orderDTOs);
+            
+            return ResponseEntity.ok(Map.of(
+                "content", orderDTOs,
+                "totalElements", orderDTOs.size(),
+                "note", "Paginação pode ser adicionada se necessário"
+            ));
 
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

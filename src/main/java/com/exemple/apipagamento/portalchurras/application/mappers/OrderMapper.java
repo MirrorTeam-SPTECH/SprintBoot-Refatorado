@@ -6,6 +6,8 @@ import com.exemple.apipagamento.portalchurras.application.dtos.PaymentDTO;
 import com.exemple.apipagamento.portalchurras.domain.entities.Order;
 import com.exemple.apipagamento.portalchurras.domain.entities.OrderItem;
 import com.exemple.apipagamento.portalchurras.domain.entities.Payment;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -13,6 +15,8 @@ import java.util.stream.Collectors;
 
 @Component
 public class OrderMapper {
+
+    private static final Logger logger = LoggerFactory.getLogger(OrderMapper.class);
 
     public OrderDTO toDTO(Order order) {
         if (order == null) {
@@ -66,7 +70,7 @@ public class OrderMapper {
                 dto.setMenuItemName(orderItem.getMenuItem().getName());
             } else {
                 // Log de warning se MenuItem for null (situação não esperada)
-                System.err.println("Warning: OrderItem " + orderItem.getId() + " tem MenuItem null");
+                logger.warn("Warning: OrderItem {} tem MenuItem null", orderItem.getId());
             }
             
             dto.setQuantity(orderItem.getQuantity() != null ? orderItem.getQuantity() : 0);
@@ -76,7 +80,7 @@ public class OrderMapper {
 
             return dto;
         } catch (Exception e) {
-            System.err.println("Erro ao mapear OrderItem para OrderItemDTO: " + e.getMessage());
+            logger.error("Erro ao mapear OrderItem para OrderItemDTO: {}", e.getMessage(), e);
             return null; // Retorna null para ser filtrado no stream
         }
     }

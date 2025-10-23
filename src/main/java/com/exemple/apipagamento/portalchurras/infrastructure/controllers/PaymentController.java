@@ -23,7 +23,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/payments")
 @Tag(name = "Payments", description = "API para processamento de pagamentos")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})
 public class PaymentController {
 
     private final PaymentUseCases paymentUseCases;

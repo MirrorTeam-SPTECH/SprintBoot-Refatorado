@@ -5,6 +5,8 @@ import com.exemple.apipagamento.portalchurras.domain.entities.*;
 import com.exemple.apipagamento.portalchurras.domain.ports.*;
 import com.exemple.apipagamento.portalchurras.domain.usecases.PaymentUseCases;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +19,8 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class PaymentService implements PaymentUseCases {
+
+    private static final Logger logger = LoggerFactory.getLogger(PaymentService.class);
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
@@ -201,7 +205,7 @@ public class PaymentService implements PaymentUseCases {
                     paymentRepository.save(payment);
                 } catch (Exception e) {
                     // Log do erro mas continua processando outros pagamentos
-                    System.err.println("Erro ao expirar pagamento " + payment.getId() + ": " + e.getMessage());
+                    logger.error("Erro ao expirar pagamento {}: {}", payment.getId(), e.getMessage(), e);
                 }
             }
         } catch (Exception e) {

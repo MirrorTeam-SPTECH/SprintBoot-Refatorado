@@ -1,5 +1,6 @@
 package com.exemple.apipagamento.portalchurras.infrastructure.messaging.consumers;
 
+import com.exemple.apipagamento.portalchurras.infrastructure.messaging.OrderStatusChangeEvent;
 import com.exemple.apipagamento.portalchurras.infrastructure.messaging.events.NewOrderEvent;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;

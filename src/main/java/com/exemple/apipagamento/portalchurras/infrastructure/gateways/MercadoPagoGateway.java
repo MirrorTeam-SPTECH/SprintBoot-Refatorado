@@ -12,7 +12,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component
-@SuppressWarnings({"unchecked", "rawtypes"})
 public class MercadoPagoGateway implements PaymentGateway {
 
     private final RestTemplate restTemplate;
@@ -64,10 +63,13 @@ public class MercadoPagoGateway implements PaymentGateway {
             }
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+            @SuppressWarnings("rawtypes")
             ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return buildSuccessResponse(response.getBody());
+                @SuppressWarnings("unchecked")
+                Map<String, Object> responseBody = response.getBody();
+                return buildSuccessResponse(responseBody);
             } else {
                 return PaymentGatewayResponse.error("Resposta inválida do Mercado Pago");
             }
@@ -112,10 +114,13 @@ public class MercadoPagoGateway implements PaymentGateway {
             }
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+            @SuppressWarnings("rawtypes")
             ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return buildPixResponse(response.getBody());
+                @SuppressWarnings("unchecked")
+                Map<String, Object> responseBody = response.getBody();
+                return buildPixResponse(responseBody);
             } else {
                 return PaymentGatewayResponse.error("Resposta inválida do Mercado Pago para PIX");
             }
@@ -126,6 +131,7 @@ public class MercadoPagoGateway implements PaymentGateway {
     }
 
     @Override
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public PaymentGatewayResponse getPaymentStatus(String externalPaymentId) {
         if (externalPaymentId == null || externalPaymentId.trim().isEmpty()) {
             return PaymentGatewayResponse.error("ID do pagamento não pode ser nulo ou vazio");
@@ -162,6 +168,7 @@ public class MercadoPagoGateway implements PaymentGateway {
     }
 
     @Override
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public PaymentGatewayResponse cancelPayment(String externalPaymentId) {
         try {
             String url = "https://api.mercadopago.com/v1/payments/" + externalPaymentId;
@@ -186,6 +193,7 @@ public class MercadoPagoGateway implements PaymentGateway {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public PaymentWebhookResponse processWebhook(Map<String, Object> webhookData) {
         try {
             String action = (String) webhookData.get("action");
@@ -240,6 +248,7 @@ public class MercadoPagoGateway implements PaymentGateway {
         return result;
     }
 
+    @SuppressWarnings("unchecked")
     private PaymentGatewayResponse buildPixResponse(Map<String, Object> responseBody) {
         PaymentGatewayResponse result = new PaymentGatewayResponse();
         

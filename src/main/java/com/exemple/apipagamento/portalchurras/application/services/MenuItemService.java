@@ -4,6 +4,8 @@ import com.exemple.apipagamento.portalchurras.domain.entities.MenuCategory;
 import com.exemple.apipagamento.portalchurras.domain.entities.MenuItem;
 import com.exemple.apipagamento.portalchurras.domain.ports.MenuItemRepository;
 import com.exemple.apipagamento.portalchurras.domain.usecases.MenuItemUseCases;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +24,7 @@ public class MenuItemService implements MenuItemUseCases {
     }
 
     @Override
+    @CacheEvict(value = "menuItems", allEntries = true)
     public MenuItem createMenuItem(String name, String description, BigDecimal price,
                                    MenuCategory category, String preparationTime) {
 
@@ -35,6 +38,7 @@ public class MenuItemService implements MenuItemUseCases {
     }
 
     @Override
+    @CacheEvict(value = "menuItems", allEntries = true)
     public MenuItem updateMenuItem(Long id, String name, String description,
                                    BigDecimal price, String preparationTime) {
 
@@ -51,6 +55,7 @@ public class MenuItemService implements MenuItemUseCases {
     }
 
     @Override
+    @CacheEvict(value = "menuItems", allEntries = true)
     public void deleteMenuItem(Long id) {
         if (!menuItemRepository.findById(id).isPresent()) {
             throw new IllegalArgumentException("Item não encontrado: " + id);
@@ -59,6 +64,7 @@ public class MenuItemService implements MenuItemUseCases {
     }
 
     @Override
+    @CacheEvict(value = "menuItems", allEntries = true)
     public void deactivateMenuItem(Long id) {
         MenuItem menuItem = menuItemRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Item não encontrado: " + id));
@@ -68,6 +74,7 @@ public class MenuItemService implements MenuItemUseCases {
     }
 
     @Override
+    @CacheEvict(value = "menuItems", allEntries = true)
     public void activateMenuItem(Long id) {
         MenuItem menuItem = menuItemRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Item não encontrado: " + id));
@@ -77,6 +84,7 @@ public class MenuItemService implements MenuItemUseCases {
     }
 
     @Override
+    @CacheEvict(value = "menuItems", allEntries = true)
     public MenuItem updateMenuItemImage(Long id, String imageUrl) {
         MenuItem menuItem = menuItemRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Item não encontrado: " + id));
@@ -93,12 +101,14 @@ public class MenuItemService implements MenuItemUseCases {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "menuItems", key = "'active'")
     public List<MenuItem> findAllActiveMenuItems() {
         return menuItemRepository.findByActiveTrue();
     }
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "menuItems", key = "'category:' + #category")
     public List<MenuItem> findMenuItemsByCategory(MenuCategory category) {
         return menuItemRepository.findByCategoryAndActiveTrue(category);
     }

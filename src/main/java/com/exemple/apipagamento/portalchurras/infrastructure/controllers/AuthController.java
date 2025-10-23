@@ -1,5 +1,6 @@
 package com.exemple.apipagamento.portalchurras.infrastructure.controllers;
 
+import com.exemple.apipagamento.portalchurras.application.dtos.ErrorResponse;
 import com.exemple.apipagamento.portalchurras.domain.entities.User;
 import com.exemple.apipagamento.portalchurras.domain.usecases.UserUseCases;
 import com.exemple.apipagamento.portalchurras.infrastructure.security.JwtUtil;
@@ -24,7 +25,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/auth")
 @Tag(name = "Authentication", description = "API para autenticação")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})
 public class AuthController {
 
     private final AuthenticationManager authenticationManager;
@@ -92,12 +92,15 @@ public class AuthController {
 
     @PostMapping("/refresh")
     @Operation(summary = "Renovar token")
-    public ResponseEntity<?> refreshToken(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<?> refreshToken(
+            @RequestHeader(value = "Authorization", required = true) String authHeader) {
+        
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.badRequest()
+                    .body(ErrorResponse.badRequest("Token inválido ou ausente"));
+        }
+
         try {
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("error", "Token inválido"));
-            }
 
             String token = authHeader.substring(7);
             String username = jwtUtil.extractUsername(token);
@@ -119,24 +122,26 @@ public class AuthController {
                 ));
             } else {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Token inválido"));
+                        .body(ErrorResponse.unauthorized("Token inválido"));
             }
 
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Erro ao renovar token"));
+                    .body(ErrorResponse.unauthorized("Erro ao renovar token"));
         }
     }
 
     @PostMapping("/validate")
     @Operation(summary = "Validar token")
-    public ResponseEntity<?> validateToken(@RequestHeader("Authorization") String authHeader) {
-        try {
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("valid", false, "error", "Token inválido"));
-            }
+    public ResponseEntity<?> validateToken(
+            @RequestHeader(value = "Authorization", required = true) String authHeader) {
+        
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.badRequest()
+                    .body(ErrorResponse.badRequest("Token inválido ou ausente"));
+        }
 
+        try {
             String token = authHeader.substring(7);
             String username = jwtUtil.extractUsername(token);
 
