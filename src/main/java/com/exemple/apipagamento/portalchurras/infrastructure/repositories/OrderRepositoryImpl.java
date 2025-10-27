@@ -85,6 +85,11 @@ public class OrderRepositoryImpl implements OrderRepository {
         }
         jpaRepository.deleteById(id);
     }
+    
+    @Override
+    public void deleteAll() {
+        jpaRepository.deleteAll();
+    }
 
     @Override
     public boolean existsById(Long id) {

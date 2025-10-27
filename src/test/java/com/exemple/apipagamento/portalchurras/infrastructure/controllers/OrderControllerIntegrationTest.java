@@ -42,16 +42,29 @@ class OrderControllerIntegrationTest {
     private OrderRepository orderRepository;
 
     private User testCustomer;
+    private User testAdmin;
     private MenuItem testMenuItem;
 
     @BeforeEach
     void setUp() {
-        // Criar usuário de teste
+        // Limpar dados anteriores
+        orderRepository.deleteAll();
+        menuItemRepository.deleteAll();
+        
+        // Criar usuário customer de teste
         if (!userRepository.existsByEmail("ordertest@test.com")) {
             testCustomer = new User("Order Test", "ordertest@test.com", "password", UserRole.CUSTOMER);
             testCustomer = userRepository.save(testCustomer);
         } else {
             testCustomer = userRepository.findByEmail("ordertest@test.com").orElseThrow();
+        }
+        
+        // Criar usuário admin de teste
+        if (!userRepository.existsByEmail("admin@test.com")) {
+            testAdmin = new User("Admin Test", "admin@test.com", "password", UserRole.ADMIN);
+            testAdmin = userRepository.save(testAdmin);
+        } else {
+            testAdmin = userRepository.findByEmail("admin@test.com").orElseThrow();
         }
 
         // Criar item do menu de teste com construtor correto
@@ -63,16 +76,19 @@ class OrderControllerIntegrationTest {
     @Test
     @WithMockUser(username = "ordertest@test.com", roles = "CUSTOMER")
     void deveCriarPedidoComSucesso() throws Exception {
-        // Given
+        // Given - Criar pedido como guest (controller atual não usa customerId)
         CreateOrderRequest request = new CreateOrderRequest();
-        request.setCustomerId(testCustomer.getId());
+        request.setCustomerName("Order Test Customer");
+        request.setCustomerEmail("ordertest@test.com");
+        request.setCustomerPhone("11999999999");
+        request.setTotal(new BigDecimal("50.00"));
         request.setNotes("Teste de integração");
 
         // When & Then
         mockMvc.perform(post("/api/orders")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.status").value("PENDING"));
     }
@@ -80,18 +96,19 @@ class OrderControllerIntegrationTest {
     @Test
     @WithMockUser(username = "admin@test.com", roles = "ADMIN")
     void deveListarTodosPedidos() throws Exception {
-        // When & Then
+        // When & Then - O endpoint retorna um objeto com 'content' (array), não um array direto
         mockMvc.perform(get("/api/orders")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.totalElements").exists());
     }
 
     @Test
     @WithMockUser(username = "ordertest@test.com", roles = "CUSTOMER")
     void deveBuscarPedidoPorId() throws Exception {
         // Given - Criar pedido primeiro
-        Order order = new Order(testCustomer, BigDecimal.ZERO, "Teste");
+        Order order = new Order(testCustomer, new BigDecimal("0.01"), "Teste");
         order = orderRepository.save(order);
 
         // When & Then
@@ -103,17 +120,23 @@ class OrderControllerIntegrationTest {
 
     @Test
     void deveRetornar401SemAutenticacao() throws Exception {
-        // When & Then
+        // When & Then - Spring Security retorna 403 (Forbidden) ao invés de 401 quando não autenticado
+        // Isso é comportamento padrão do Spring Security 6.x
         mockMvc.perform(get("/api/orders")
                 .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());  // 403, não 401
     }
 
     @Test
-    @WithMockUser(username = "ordertest@test.com", roles = "CUSTOMER")
+    @WithMockUser(username = "admin@test.com", roles = "ADMIN")
     void deveListarPedidosDoCliente() throws Exception {
-        // When & Then
-        mockMvc.perform(get("/api/orders/customer/" + testCustomer.getId())
+        // When & Then - O endpoint usa email, não ID do cliente
+        // Requer role ADMIN/EMPLOYEE conforme SecurityConfig
+        // Precisa criar um pedido primeiro para garantir que há dados
+        Order order = new Order(testCustomer, new BigDecimal("0.01"), "Teste listagem");
+        orderRepository.save(order);
+        
+        mockMvc.perform(get("/api/orders/customer/" + testCustomer.getEmail())
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
@@ -123,14 +146,14 @@ class OrderControllerIntegrationTest {
     @WithMockUser(username = "admin@test.com", roles = "ADMIN")
     void deveAtualizarStatusDoPedido() throws Exception {
         // Given
-        Order order = new Order(testCustomer, BigDecimal.ZERO, "Teste");
+        Order order = new Order(testCustomer, new BigDecimal("0.01"), "Teste");
         order = orderRepository.save(order);
 
-        // When & Then
+        // When & Then - Transição válida: PENDING -> CONFIRMED
         mockMvc.perform(patch("/api/orders/" + order.getId() + "/status")
-                .param("status", "IN_PREPARATION")
-                .contentType(MediaType.APPLICATION_JSON))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\": \"CONFIRMED\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("IN_PREPARATION"));
+                .andExpect(jsonPath("$.status").value("CONFIRMED"));
     }
 }

@@ -3,7 +3,6 @@ package com.exemple.apipagamento.portalchurras.infrastructure.controllers;
 import com.exemple.apipagamento.portalchurras.application.dtos.MenuItemDTO;
 import com.exemple.apipagamento.portalchurras.application.services.UserService;
 import com.exemple.apipagamento.portalchurras.domain.entities.MenuCategory;
-import com.exemple.apipagamento.portalchurras.domain.entities.User;
 import com.exemple.apipagamento.portalchurras.domain.entities.UserRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,14 +33,20 @@ class MenuItemControllerIntegrationTest {
     @Autowired
     private UserService userService;
     
+    @Autowired
+    private com.exemple.apipagamento.portalchurras.infrastructure.repositories.JpaMenuItemRepository menuItemRepository;
+    
     private String adminToken;
     private String customerToken;
 
     @BeforeEach
     void setUp() throws Exception {
+        // Limpar todos os itens do menu antes de cada teste
+        menuItemRepository.deleteAll();
+        
         // Criar usuário admin diretamente via service
         String adminEmail = "admin" + System.currentTimeMillis() + "@test.com";
-        User admin = userService.createUser("Admin Test", adminEmail, "Admin123!", UserRole.ADMIN);
+        userService.createUser("Admin Test", adminEmail, "Admin123!", UserRole.ADMIN);
 
         String adminLoginJson = String.format("{\"email\":\"%s\",\"password\":\"Admin123!\"}", adminEmail);
         String adminResponse = mockMvc.perform(post("/api/auth/login")
@@ -52,7 +57,7 @@ class MenuItemControllerIntegrationTest {
 
         // Criar usuário customer diretamente via service
         String customerEmail = "customer" + System.currentTimeMillis() + "@test.com";
-        User customer = userService.createUser("Customer Test", customerEmail, "Customer123!", UserRole.CUSTOMER);
+        userService.createUser("Customer Test", customerEmail, "Customer123!", UserRole.CUSTOMER);
 
         String customerLoginJson = String.format("{\"email\":\"%s\",\"password\":\"Customer123!\"}", customerEmail);
         String customerResponse = mockMvc.perform(post("/api/auth/login")
@@ -64,11 +69,11 @@ class MenuItemControllerIntegrationTest {
 
     @Test
     void deveListarItensDoMenuAtivos() throws Exception {
-        // When & Then
+        // When & Then - O endpoint retorna um objeto com categorias, não um array direto
         mockMvc.perform(get("/api/menu-items")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
+                .andExpect(jsonPath("$").isMap());  // Retorna um objeto MenuResponseDTO
     }
 
     @Test
@@ -90,11 +95,13 @@ class MenuItemControllerIntegrationTest {
         dto.setCategory(MenuCategory.HAMBURGUERES);
         dto.setPreparationTime("20 min");
 
+        String jsonContent = objectMapper.writeValueAsString(dto);
+
         // When & Then
         mockMvc.perform(post("/api/menu-items")
                 .header("Authorization", "Bearer " + adminToken)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(dto)))
+                .content(jsonContent))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.name").value(dto.getName()))
@@ -169,6 +176,7 @@ class MenuItemControllerIntegrationTest {
         updateDto.setName("Updated Burger");
         updateDto.setDescription("Updated description");
         updateDto.setPrice(new BigDecimal("30.00"));
+        updateDto.setCategory(MenuCategory.HAMBURGUERES);  // Campo obrigatório!
         updateDto.setPreparationTime("25 min");
 
         // Then
@@ -176,7 +184,7 @@ class MenuItemControllerIntegrationTest {
                 .header("Authorization", "Bearer " + adminToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updateDto)))
-                .andExpect(status().isOk())
+                .andExpect(status().isOk())  // PUT retorna 200, não 201
                 .andExpect(jsonPath("$.name").value("Updated Burger"));
     }
 
@@ -194,6 +202,7 @@ class MenuItemControllerIntegrationTest {
                 .header("Authorization", "Bearer " + adminToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
@@ -201,7 +210,7 @@ class MenuItemControllerIntegrationTest {
         Long createdId = objectMapper.readTree(createResponse).get("id").asLong();
 
         // When & Then - Desativar
-        mockMvc.perform(delete("/api/menu-items/" + createdId + "/deactivate")
+        mockMvc.perform(patch("/api/menu-items/" + createdId + "/deactivate")
                 .header("Authorization", "Bearer " + adminToken)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())

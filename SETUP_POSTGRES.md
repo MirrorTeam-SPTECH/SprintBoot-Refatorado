@@ -3,6 +3,7 @@
 ## 📋 PRÉ-REQUISITOS
 
 ### 1. PostgreSQL Instalado e Rodando
+
 ```bash
 # Verificar se está rodando
 psql --version
@@ -12,6 +13,7 @@ net start postgresql-x64-15
 ```
 
 ### 2. Banco de Dados Criado
+
 ```sql
 -- No pgAdmin ou psql:
 CREATE DATABASE portalchurras;
@@ -117,6 +119,7 @@ set SPRING_PROFILES_ACTIVE=prod
 ### Passo 3: Verificar Conexão
 
 Após iniciar, você verá no log:
+
 ```
 2025-10-23 ... : HikariPool-1 - Starting...
 2025-10-23 ... : HikariPool-1 - Start completed.
@@ -144,7 +147,7 @@ public CorsConfigurationSource corsConfigurationSource() {
     configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
     configuration.setAllowedHeaders(Arrays.asList("*"));
     configuration.setAllowCredentials(true);
-    
+
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", configuration);
     return source;
@@ -154,21 +157,22 @@ public CorsConfigurationSource corsConfigurationSource() {
 ### Passo 2: Configurar Frontend
 
 #### Para React/Next.js:
+
 ```javascript
 // api.js ou axios.config.js
-import axios from 'axios';
+import axios from "axios";
 
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: "http://localhost:8080/api",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
 // Interceptor para adicionar token JWT
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -181,23 +185,24 @@ export default api;
 ```
 
 #### Exemplo de Uso:
+
 ```javascript
 // Login
 const login = async (email, password) => {
-  const response = await api.post('/auth/login', { email, password });
-  localStorage.setItem('token', response.data.token);
+  const response = await api.post("/auth/login", { email, password });
+  localStorage.setItem("token", response.data.token);
   return response.data;
 };
 
 // Buscar menu
 const getMenuItems = async () => {
-  const response = await api.get('/menu-items');
+  const response = await api.get("/menu-items");
   return response.data;
 };
 
 // Criar pedido (requer autenticação)
 const createOrder = async (orderData) => {
-  const response = await api.post('/orders', orderData);
+  const response = await api.post("/orders", orderData);
   return response.data;
 };
 ```
@@ -207,17 +212,20 @@ const createOrder = async (orderData) => {
 ## 📡 ENDPOINTS DISPONÍVEIS
 
 ### Autenticação
+
 - `POST /api/auth/login` - Login
 - `POST /api/auth/refresh` - Refresh token
 - `POST /api/auth/validate` - Validar token
 
 ### Usuários
+
 - `POST /api/users/register` - Registrar cliente
 - `GET /api/users/me` - Perfil do usuário logado
 - `PUT /api/users/me` - Atualizar perfil
 - `PUT /api/users/me/password` - Trocar senha
 
 ### Menu
+
 - `GET /api/menu-items` - Listar itens ativos
 - `GET /api/menu-items/{id}` - Buscar item por ID
 - `GET /api/menu-items/category/{category}` - Listar por categoria
@@ -226,6 +234,7 @@ const createOrder = async (orderData) => {
 - `DELETE /api/menu-items/{id}/deactivate` - Desativar item (ADMIN)
 
 ### Pedidos
+
 - `POST /api/orders` - Criar pedido
 - `GET /api/orders` - Listar pedidos do usuário
 - `GET /api/orders/{id}` - Buscar pedido por ID
@@ -233,11 +242,13 @@ const createOrder = async (orderData) => {
 - `DELETE /api/orders/{id}/cancel` - Cancelar pedido
 
 ### Pagamentos
+
 - `POST /api/payments/{orderId}/process` - Processar pagamento
 - `GET /api/payments/order/{orderId}` - Buscar pagamento por pedido
 - `GET /api/payments/{id}/status` - Verificar status do pagamento
 
 ### Fidelidade
+
 - `GET /api/loyalty/balance` - Consultar saldo de pontos
 - `GET /api/loyalty/history` - Histórico de pontos
 
@@ -277,8 +288,9 @@ RABBITMQ_PASSWORD=guest
 ## 🐳 DOCKER (Opcional - Desenvolvimento Local)
 
 ### docker-compose.yml
+
 ```yaml
-version: '3.8'
+version: "3.8"
 
 services:
   postgres:
@@ -314,6 +326,7 @@ volumes:
 ```
 
 ### Iniciar serviços:
+
 ```bash
 docker-compose up -d
 ```
@@ -323,6 +336,7 @@ docker-compose up -d
 ## ✅ CHECKLIST DE DEPLOY
 
 ### Backend
+
 - [ ] PostgreSQL configurado e rodando
 - [ ] Banco de dados criado
 - [ ] `application-prod.properties` configurado
@@ -333,6 +347,7 @@ docker-compose up -d
 - [ ] Aplicação iniciada com perfil prod: `java -jar -Dspring.profiles.active=prod target/*.jar`
 
 ### Frontend
+
 - [ ] Axios/Fetch configurado com baseURL correto
 - [ ] Interceptor de token implementado
 - [ ] CORS configurado no backend
@@ -340,6 +355,7 @@ docker-compose up -d
 - [ ] Loading states implementados
 
 ### Testes
+
 - [ ] Testar login/registro
 - [ ] Testar busca de itens do menu
 - [ ] Testar criação de pedido
@@ -351,6 +367,7 @@ docker-compose up -d
 ## 🆘 TROUBLESHOOTING
 
 ### Erro: "Connection refused" ao PostgreSQL
+
 ```bash
 # Verificar se PostgreSQL está rodando
 net start postgresql-x64-15
@@ -360,15 +377,18 @@ netstat -an | findstr :5432
 ```
 
 ### Erro: CORS
+
 - Verificar se o frontend está na lista de origens permitidas
 - Verificar se o cabeçalho `Authorization` está sendo enviado
 - Testar com Postman primeiro (não tem CORS)
 
 ### Erro: "JWT token expired"
+
 - Implementar refresh token no frontend
 - Armazenar token de forma segura (HttpOnly cookies ou localStorage)
 
 ### Erro 403 Forbidden
+
 - Verificar se o token está sendo enviado: `Authorization: Bearer {token}`
 - Verificar se o usuário tem a role correta (ADMIN, EMPLOYEE, CUSTOMER)
 - Verificar se o endpoint requer autenticação
@@ -378,11 +398,13 @@ netstat -an | findstr :5432
 ## 📚 DOCUMENTAÇÃO DA API
 
 Acesse o Swagger UI:
+
 ```
 http://localhost:8080/swagger-ui.html
 ```
 
 Ou OpenAPI JSON:
+
 ```
 http://localhost:8080/v3/api-docs
 ```

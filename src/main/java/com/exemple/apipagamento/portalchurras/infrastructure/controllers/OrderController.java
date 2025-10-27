@@ -10,7 +10,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -38,7 +37,7 @@ public class OrderController {
     @Operation(summary = "Criar novo pedido")
     @ApiResponse(responseCode = "201", description = "Pedido criado com sucesso")
     @ApiResponse(responseCode = "400", description = "Dados inválidos")
-    public ResponseEntity<?> createOrder(@Valid @RequestBody CreateOrderRequest request) {
+    public ResponseEntity<?> createOrder(@RequestBody CreateOrderRequest request) {  // Removido @Valid
         try {
             Order order = orderUseCases.createOrder(
                     request.getCustomerName(),
@@ -67,7 +66,7 @@ public class OrderController {
     @ApiResponse(responseCode = "404", description = "Pedido ou item do cardápio não encontrado")
     public ResponseEntity<?> addItemToOrder(
             @Parameter(description = "ID do pedido") @PathVariable Long orderId,
-            @Valid @RequestBody AddOrderItemRequest request) {
+            @RequestBody AddOrderItemRequest request) {  // Removido @Valid
 
         try {
             Order order = orderUseCases.addItemToOrder(

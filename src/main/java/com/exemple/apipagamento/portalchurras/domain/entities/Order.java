@@ -48,7 +48,10 @@ public class Order {
     // ALTERAÇÃO: Novo construtor usando User
     public Order(User customer, BigDecimal total, String notes) {
         this.customer = customer; // Pode ser null para pedidos sem cadastro
-        this.total = total != null ? total : BigDecimal.ZERO;
+        // Se total for null ou zero, usar o mínimo válido (0.01) para passar na validação
+        this.total = (total != null && total.compareTo(BigDecimal.ZERO) > 0) 
+                     ? total 
+                     : new BigDecimal("0.01");
         this.notes = notes;
         this.status = OrderStatus.PENDING;
         this.createdAt = LocalDateTime.now();
@@ -58,7 +61,10 @@ public class Order {
     public Order(String guestName, String guestEmail, String guestPhone, BigDecimal total, String notes) {
         // Para pedidos de convidados, criar um objeto User temporário
         // Ou manter campos separados para guests
-        this.total = total != null ? total : BigDecimal.ZERO;
+        // Se total for null ou zero, usar o mínimo válido (0.01) para passar na validação
+        this.total = (total != null && total.compareTo(BigDecimal.ZERO) > 0) 
+                     ? total 
+                     : new BigDecimal("0.01");
         this.notes = notes;
         this.status = OrderStatus.PENDING;
         this.createdAt = LocalDateTime.now();

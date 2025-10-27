@@ -25,6 +25,8 @@ public interface OrderRepository {
     List<Order> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 
     void deleteById(Long id);
+    
+    void deleteAll(); // ADICIONADO: Para limpeza de dados em testes
 
     boolean existsById(Long id);
 

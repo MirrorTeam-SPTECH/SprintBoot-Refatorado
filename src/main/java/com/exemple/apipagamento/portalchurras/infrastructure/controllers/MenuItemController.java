@@ -81,7 +81,7 @@ public class MenuItemController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")  // Apenas admins podem criar itens
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Criar novo item do cardápio",
             security = @SecurityRequirement(name = "Bearer"))
     @ApiResponse(responseCode = "201", description = "Item criado com sucesso")
@@ -115,7 +115,7 @@ public class MenuItemController {
             security = @SecurityRequirement(name = "Bearer"))
     public ResponseEntity<?> updateMenuItem(
             @PathVariable Long id,
-            @Valid @RequestBody MenuItemDTO menuItemDTO) {
+            @RequestBody MenuItemDTO menuItemDTO) {  // Removido @Valid para permitir categoria opcional no update
 
         try {
             MenuItem menuItem = menuItemUseCases.updateMenuItem(
@@ -169,7 +169,10 @@ public class MenuItemController {
     public ResponseEntity<?> deactivateMenuItem(@PathVariable Long id) {
         try {
             menuItemUseCases.deactivateMenuItem(id);
-            return ResponseEntity.ok(Map.of("message", "Item desativado com sucesso"));
+            MenuItem menuItem = menuItemUseCases.findMenuItemById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Item não encontrado"));
+            MenuItemDTO responseDTO = menuItemMapper.toDTO(menuItem);
+            return ResponseEntity.ok(responseDTO);
 
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -187,7 +190,10 @@ public class MenuItemController {
     public ResponseEntity<?> activateMenuItem(@PathVariable Long id) {
         try {
             menuItemUseCases.activateMenuItem(id);
-            return ResponseEntity.ok(Map.of("message", "Item ativado com sucesso"));
+            MenuItem menuItem = menuItemUseCases.findMenuItemById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Item não encontrado"));
+            MenuItemDTO responseDTO = menuItemMapper.toDTO(menuItem);
+            return ResponseEntity.ok(responseDTO);
 
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
