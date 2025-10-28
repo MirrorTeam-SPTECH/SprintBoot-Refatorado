@@ -96,16 +96,6 @@ jobs:
       - name: Gerar relatório de cobertura
         run: mvn jacoco:report
 
-      - name: Upload coverage para Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          files: ./target/site/jacoco/jacoco.xml
-          flags: unittests
-          name: codecov-portal-churras
-          fail_ci_if_error: true
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
       - name: Publicar relatório de testes
         uses: dorny/test-reporter@v1
         if: always()
