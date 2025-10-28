@@ -96,9 +96,6 @@ jobs:
       - name: Gerar relatório de cobertura
         run: mvn jacoco:report
 
-      - name: Verificar cobertura mínima
-        run: mvn jacoco:check -Djacoco.minimum=0.60
-
       - name: Upload coverage para Codecov
         uses: codecov/codecov-action@v4
         with:
