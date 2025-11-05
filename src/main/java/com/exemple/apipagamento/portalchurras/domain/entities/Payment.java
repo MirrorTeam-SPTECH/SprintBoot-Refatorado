@@ -36,8 +36,14 @@ public class Payment {
     // IDs externos para rastreamento
     private String externalPaymentId; // ID do Mercado Pago
     private String externalPreferenceId; // ID da preferência MP
-    private String qrCode; // QR Code para PIX
-    private String qrCodeBase64; // QR Code em Base64
+    
+    @Column(columnDefinition = "TEXT")
+    private String qrCode; // QR Code para PIX (pode ser longo)
+    
+    @Column(columnDefinition = "TEXT")
+    private String qrCodeBase64; // QR Code em Base64 (pode ser muito longo)
+    
+    @Column(length = 500)
     private String ticketUrl; // URL do comprovante
 
     @Column(columnDefinition = "TEXT")

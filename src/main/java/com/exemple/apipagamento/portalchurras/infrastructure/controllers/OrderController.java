@@ -2,6 +2,7 @@ package com.exemple.apipagamento.portalchurras.infrastructure.controllers;
 
 import com.exemple.apipagamento.portalchurras.application.dtos.*;
 import com.exemple.apipagamento.portalchurras.application.mappers.OrderMapper;
+import com.exemple.apipagamento.portalchurras.application.services.ReportService;
 import com.exemple.apipagamento.portalchurras.domain.entities.Order;
 import com.exemple.apipagamento.portalchurras.domain.entities.OrderStatus;
 import com.exemple.apipagamento.portalchurras.domain.usecases.OrderUseCases;
@@ -27,10 +28,12 @@ public class OrderController {
 
     private final OrderUseCases orderUseCases;
     private final OrderMapper orderMapper;
+    private final ReportService reportService;
 
-    public OrderController(OrderUseCases orderUseCases, OrderMapper orderMapper) {
+    public OrderController(OrderUseCases orderUseCases, OrderMapper orderMapper, ReportService reportService) {
         this.orderUseCases = orderUseCases;
         this.orderMapper = orderMapper;
+        this.reportService = reportService;
     }
 
     @PostMapping
@@ -241,7 +244,8 @@ public class OrderController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN') or hasRole('EMPLOYEE')")
+    // Removido @PreAuthorize - qualquer usuário autenticado pode ver seus próprios pedidos
+    // O SecurityConfig já controla o acesso com .authenticated()
     @Operation(summary = "Listar todos os pedidos (com paginação sugerida para implementação futura)",
             security = @SecurityRequirement(name = "Bearer"),
             description = "Retorna todos os pedidos. Para grandes volumes, considere adicionar Pageable como parâmetro.")
@@ -335,6 +339,37 @@ public class OrderController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Erro interno do servidor"));
+        }
+    }
+
+    @GetMapping("/stats")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('EMPLOYEE')")
+    @Operation(summary = "Obter estatísticas do dashboard",
+            security = @SecurityRequirement(name = "Bearer"),
+            description = "Retorna métricas e estatísticas para o dashboard de relatórios")
+    @ApiResponse(responseCode = "200", description = "Estatísticas retornadas com sucesso")
+    public ResponseEntity<?> getDashboardStats(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+
+        try {
+            // Se não houver datas, retorna métricas do dia/mês atual
+            if (startDate == null || endDate == null) {
+                ReportService.DashboardMetrics metrics = reportService.getDashboardMetrics();
+                return ResponseEntity.ok(metrics);
+            }
+            
+            // Se houver datas, retorna relatório de vendas do período
+            ReportService.SalesReport report = reportService.getSalesReport(startDate, endDate);
+            return ResponseEntity.ok(report);
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            e.printStackTrace(); // Para debug no console do backend
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Erro interno do servidor: " + e.getMessage()));
         }
     }
 }

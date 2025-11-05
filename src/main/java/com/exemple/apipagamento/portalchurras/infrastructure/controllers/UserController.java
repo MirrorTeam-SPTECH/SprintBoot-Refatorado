@@ -1,24 +1,36 @@
 package com.exemple.apipagamento.portalchurras.infrastructure.controllers;
 
 
-import com.exemple.apipagamento.portalchurras.application.dtos.*;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.exemple.apipagamento.portalchurras.application.dtos.ChangePasswordRequest;
+import com.exemple.apipagamento.portalchurras.application.dtos.CreateUserRequest;
+import com.exemple.apipagamento.portalchurras.application.dtos.UpdateUserProfileRequest;
+import com.exemple.apipagamento.portalchurras.application.dtos.UserDTO;
 import com.exemple.apipagamento.portalchurras.application.mappers.UserMapper;
 import com.exemple.apipagamento.portalchurras.domain.entities.User;
 import com.exemple.apipagamento.portalchurras.domain.entities.UserRole;
 import com.exemple.apipagamento.portalchurras.domain.usecases.UserUseCases;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -53,9 +65,13 @@ public class UserController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of("error", e.getMessage()));
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("error", "Este email já está cadastrado"));
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Erro interno do servidor"));
+                    .body(Map.of("error", "Erro interno do servidor: " + e.getMessage()));
         }
     }
 

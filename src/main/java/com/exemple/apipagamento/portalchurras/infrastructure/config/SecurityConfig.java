@@ -1,7 +1,8 @@
 package com.exemple.apipagamento.portalchurras.infrastructure.config;
 
-import com.exemple.apipagamento.portalchurras.infrastructure.security.JwtAuthenticationFilter;
-import com.exemple.apipagamento.portalchurras.infrastructure.security.CustomUserDetailsService;
+import java.util.Arrays;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,15 +23,15 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
-import java.util.List;
+import com.exemple.apipagamento.portalchurras.infrastructure.security.CustomUserDetailsService;
+import com.exemple.apipagamento.portalchurras.infrastructure.security.JwtAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
-    @Value("${cors.allowed.origins:http://localhost:3000,http://localhost:4200}")
+    @Value("${cors.allowed.origins:http://localhost:3000,http://localhost:4200,http://localhost:5173}")
     private String corsAllowedOrigins;
 
     private final CustomUserDetailsService userDetailsService;
@@ -92,7 +93,6 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/h2-console/**",
                                 "/api/auth/**",
-                                "/api/users/register",  // Registro público de clientes
                                 "/api/webhooks/**"      // Webhooks públicos
                         ).permitAll()
 
@@ -104,11 +104,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/menu-items/**").hasRole("ADMIN")
 
                         // Orders - criação pública, gerenciamento por staff
-                        .requestMatchers(HttpMethod.POST, "/api/orders").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/orders/*/items").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/orders/*").permitAll()  // Consulta de pedido específico
-                        .requestMatchers(HttpMethod.PATCH, "/api/orders/*/cancel").permitAll()  // Cancelamento pelo cliente
-                        .requestMatchers("/api/orders/**").hasAnyRole("EMPLOYEE", "ADMIN")
+                        // IMPORTANTE: regras específicas devem vir ANTES das genéricas
+                        .requestMatchers(HttpMethod.GET, "/api/orders", "/api/orders/**").authenticated()  // Qualquer usuário autenticado pode ver pedidos
+                        .requestMatchers(HttpMethod.POST, "/api/orders", "/api/orders/**").authenticated()  // Qualquer usuário pode criar pedidos
+                        .requestMatchers(HttpMethod.PATCH, "/api/orders/*/cancel").authenticated()  // Cancelamento autenticado
+                        .requestMatchers(HttpMethod.PUT, "/api/orders/**").hasAnyRole("EMPLOYEE", "ADMIN")  // Atualização restrita
+                        .requestMatchers(HttpMethod.DELETE, "/api/orders/**").hasAnyRole("EMPLOYEE", "ADMIN")  // Exclusão restrita
 
                         // Payments - criação pública, consulta restrita
                         .requestMatchers(HttpMethod.POST, "/api/payments").permitAll()
@@ -117,9 +118,14 @@ public class SecurityConfig {
                         .requestMatchers("/api/payments/**").hasAnyRole("EMPLOYEE", "ADMIN")
 
                         // Users - próprio perfil vs gestão de outros
+                        // IMPORTANTE: Regras específicas ANTES das genéricas
+                        .requestMatchers(HttpMethod.POST, "/api/users/register").permitAll()  // Registro público
                         .requestMatchers("/api/users/me/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/users/customers").hasAnyRole("EMPLOYEE", "ADMIN")
-                        .requestMatchers("/api/users/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/users/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/users/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/users/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/users/**").hasRole("ADMIN")
 
                         // Qualquer outra requisição precisa de autenticação
                         .anyRequest().authenticated()

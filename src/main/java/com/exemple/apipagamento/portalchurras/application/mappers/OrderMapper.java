@@ -1,17 +1,18 @@
 package com.exemple.apipagamento.portalchurras.application.mappers;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
 import com.exemple.apipagamento.portalchurras.application.dtos.OrderDTO;
 import com.exemple.apipagamento.portalchurras.application.dtos.OrderItemDTO;
 import com.exemple.apipagamento.portalchurras.application.dtos.PaymentDTO;
 import com.exemple.apipagamento.portalchurras.domain.entities.Order;
 import com.exemple.apipagamento.portalchurras.domain.entities.OrderItem;
 import com.exemple.apipagamento.portalchurras.domain.entities.Payment;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Component
 public class OrderMapper {
@@ -68,6 +69,7 @@ public class OrderMapper {
             if (orderItem.getMenuItem() != null) {
                 dto.setMenuItemId(orderItem.getMenuItem().getId());
                 dto.setMenuItemName(orderItem.getMenuItem().getName());
+                dto.setMenuItemImageUrl(orderItem.getMenuItem().getImageUrl());
             } else {
                 // Log de warning se MenuItem for null (situação não esperada)
                 logger.warn("Warning: OrderItem {} tem MenuItem null", orderItem.getId());

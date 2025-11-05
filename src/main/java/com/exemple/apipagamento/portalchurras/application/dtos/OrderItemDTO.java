@@ -7,6 +7,7 @@ public class OrderItemDTO {
     private Long id;
     private Long menuItemId;
     private String menuItemName;
+    private String menuItemImageUrl;
     private Integer quantity;
     private BigDecimal unitPrice;
     private BigDecimal totalPrice;
@@ -23,6 +24,9 @@ public class OrderItemDTO {
 
     public String getMenuItemName() { return menuItemName; }
     public void setMenuItemName(String menuItemName) { this.menuItemName = menuItemName; }
+
+    public String getMenuItemImageUrl() { return menuItemImageUrl; }
+    public void setMenuItemImageUrl(String menuItemImageUrl) { this.menuItemImageUrl = menuItemImageUrl; }
 
     public Integer getQuantity() { return quantity; }
     public void setQuantity(Integer quantity) { this.quantity = quantity; }
