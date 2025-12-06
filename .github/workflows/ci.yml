@@ -118,7 +118,7 @@ jobs:
   security-scan:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' # Executa apenas na branch main
-    # Removido 'needs: build-and-test' para rodar em paralelo
+    
 
     steps:
       - name: Checkout código

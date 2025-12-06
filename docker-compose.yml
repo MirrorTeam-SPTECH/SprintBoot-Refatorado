@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   # PostgreSQL Database
@@ -9,8 +9,10 @@ services:
       POSTGRES_DB: portalchurras
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin123
+      POSTGRES_HOST_AUTH_METHOD: md5
     ports:
       - "5432:5432"
+    command: postgres -c password_encryption=md5
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -25,7 +27,7 @@ services:
       RABBITMQ_DEFAULT_USER: admin
       RABBITMQ_DEFAULT_PASS: admin123
     ports:
-      - "5672:5672"   # AMQP port
+      - "5672:5672" # AMQP port
       - "15672:15672" # Management UI
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
