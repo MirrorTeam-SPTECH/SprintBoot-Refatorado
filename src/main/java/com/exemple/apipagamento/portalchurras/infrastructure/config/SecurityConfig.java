@@ -93,7 +93,10 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/h2-console/**",
                                 "/api/auth/**",
-                                "/api/webhooks/**"      // Webhooks públicos
+                                "/api/webhooks/**",     // Webhooks públicos
+                                "/actuator/**",         // Health checks para ALB
+                                "/actuator/health",     // Health check específico
+                                "/actuator/info"        // Info endpoint
                         ).permitAll()
 
                         // Menu items - leitura pública, escrita apenas admin
