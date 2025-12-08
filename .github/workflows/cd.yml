@@ -162,7 +162,7 @@ jobs:
           
           # Executar deploy no servidor
           echo "⚙️ Executando deploy..."
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ec2-user@$BACKEND_IP << 'ENDSSH'
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ec2-user@$BACKEND_IP 'bash -s' << 'ENDSSH'
             set -e
             
             echo "🛑 Parando aplicação atual..."
@@ -170,9 +170,7 @@ jobs:
             sleep 5
             
             echo "📁 Preparando diretórios..."
-            sudo mkdir -p /app/config
-            sudo mkdir -p /app/backup
-            sudo mkdir -p /app/logs
+            sudo mkdir -p /app/config /app/backup /app/logs
             sudo chown -R ec2-user:ec2-user /app
             
             # Backup do JAR anterior
@@ -185,17 +183,40 @@ jobs:
             
             echo "🚀 Iniciando aplicação..."
             cd /app
+            
+            # Exportar variáveis de ambiente
+            export DB_URL="jdbc:postgresql://10.0.10.234:5432/portalchurras"
+            export DB_USERNAME="postgres"
+            export DB_PASSWORD="Admin123!@#"
+            export REDIS_HOST="10.0.10.106"
+            export REDIS_PORT="6379"
+            export RABBITMQ_HOST="10.0.10.106"
+            export RABBITMQ_PORT="5672"
+            export RABBITMQ_USER="guest"
+            export RABBITMQ_PASSWORD="guest"
+            export JWT_SECRET="portalchurras-secret-key-2024-very-long-and-secure"
+            
+            # Iniciar aplicação com variáveis
             nohup java -Xmx512m -Xms256m \
               -Dspring.profiles.active=prod \
+              -Dspring.datasource.url="$DB_URL" \
+              -Dspring.datasource.username="$DB_USERNAME" \
+              -Dspring.datasource.password="$DB_PASSWORD" \
+              -Dspring.redis.host="$REDIS_HOST" \
+              -Dspring.redis.port="$REDIS_PORT" \
+              -Dspring.rabbitmq.host="$RABBITMQ_HOST" \
+              -Dspring.rabbitmq.port="$RABBITMQ_PORT" \
+              -Dspring.rabbitmq.username="$RABBITMQ_USER" \
+              -Dspring.rabbitmq.password="$RABBITMQ_PASSWORD" \
+              -Djwt.secret="$JWT_SECRET" \
               -jar /app/app.jar > /app/logs/backend.log 2>&1 &
             
             echo "⏳ Aguardando inicialização..."
             sleep 60
             
-            # Health check simples - verifica se o processo está rodando
-            for i in {1..15}; do
+            # Health check
+            for i in $(seq 1 15); do
               if pgrep -f 'java.*app.jar' > /dev/null; then
-                # Verificar se a porta está ouvindo
                 if ss -tlnp | grep -q ':8080'; then
                   echo "✅ Backend está rodando na porta 8080!"
                   tail -50 /app/logs/backend.log
