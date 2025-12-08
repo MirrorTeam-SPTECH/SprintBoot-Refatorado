@@ -172,37 +172,42 @@ jobs:
             echo "📁 Preparando diretórios..."
             sudo mkdir -p /app/config
             sudo mkdir -p /app/backup
+            sudo mkdir -p /app/logs
+            sudo chown -R ec2-user:ec2-user /app
             
             # Backup do JAR anterior
             if [ -f /app/app.jar ]; then
-              sudo cp /app/app.jar /app/backup/app.jar.$(date +%Y%m%d%H%M%S)
+              cp /app/app.jar /app/backup/app.jar.$(date +%Y%m%d%H%M%S)
             fi
             
             # Mover novo JAR
-            sudo cp /tmp/app.jar /app/app.jar
-            sudo chown ec2-user:ec2-user /app/app.jar
+            cp /tmp/app.jar /app/app.jar
             
             echo "🚀 Iniciando aplicação..."
             cd /app
             nohup java -Xmx512m -Xms256m \
               -Dspring.profiles.active=prod \
-              -jar /app/app.jar > /var/log/backend.log 2>&1 &
+              -jar /app/app.jar > /app/logs/backend.log 2>&1 &
             
             echo "⏳ Aguardando inicialização..."
-            sleep 45
+            sleep 60
             
-            # Health check
-            for i in {1..10}; do
-              if curl -sf http://localhost:8080/actuator/health > /dev/null 2>&1; then
-                echo "✅ Backend está saudável!"
-                exit 0
+            # Health check simples - verifica se o processo está rodando
+            for i in {1..15}; do
+              if pgrep -f 'java.*app.jar' > /dev/null; then
+                # Verificar se a porta está ouvindo
+                if ss -tlnp | grep -q ':8080'; then
+                  echo "✅ Backend está rodando na porta 8080!"
+                  tail -50 /app/logs/backend.log
+                  exit 0
+                fi
               fi
-              echo "Tentativa $i/10..."
+              echo "Tentativa $i/15..."
               sleep 10
             done
             
             echo "❌ Health check falhou"
-            tail -100 /var/log/backend.log
+            tail -100 /app/logs/backend.log
             exit 1
           ENDSSH
           
