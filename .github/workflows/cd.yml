@@ -192,8 +192,8 @@ jobs:
             export REDIS_PORT="6379"
             export RABBITMQ_HOST="10.0.10.106"
             export RABBITMQ_PORT="5672"
-            export RABBITMQ_USER="guest"
-            export RABBITMQ_PASSWORD="guest"
+            export RABBITMQ_USER="admin"
+            export RABBITMQ_PASSWORD='Admin123!@#'
             export JWT_SECRET="portalchurras-secret-key-2024-very-long-and-secure"
             
             # Iniciar aplicação com variáveis (usando aspas simples para proteger caracteres especiais)
@@ -206,8 +206,8 @@ jobs:
               -Dspring.redis.port="$REDIS_PORT" \
               -Dspring.rabbitmq.host="$RABBITMQ_HOST" \
               -Dspring.rabbitmq.port="$RABBITMQ_PORT" \
-              -Dspring.rabbitmq.username="$RABBITMQ_USER" \
-              -Dspring.rabbitmq.password="$RABBITMQ_PASSWORD" \
+              -Dspring.rabbitmq.username="admin" \
+              -Dspring.rabbitmq.password='Admin123!@#' \
               -Djwt.secret="$JWT_SECRET" \
               -jar /app/app.jar > /app/logs/backend.log 2>&1 &
             
