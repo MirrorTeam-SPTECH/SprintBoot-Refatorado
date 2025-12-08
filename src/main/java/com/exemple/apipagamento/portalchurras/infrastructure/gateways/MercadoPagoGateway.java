@@ -87,8 +87,10 @@ public class MercadoPagoGateway implements PaymentGateway {
         if (request.getAmount() == null || request.getAmount().doubleValue() <= 0) {
             return PaymentGatewayResponse.error("Valor deve ser maior que zero");
         }
+        
+        // Modo demo: retornar QR Code mock quando não há token configurado
         if (properties.getAccessToken() == null || properties.getAccessToken().trim().isEmpty()) {
-            return PaymentGatewayResponse.error("Access token do Mercado Pago não configurado");
+            return createMockPixResponse(request);
         }
 
         try {
@@ -286,5 +288,39 @@ public class MercadoPagoGateway implements PaymentGateway {
 
         result.setRawResponse(responseBody);
         return result;
+    }
+    
+    /**
+     * Cria uma resposta mock de PIX para ambiente de demonstração
+     */
+    private PaymentGatewayResponse createMockPixResponse(PaymentGatewayRequest request) {
+        PaymentGatewayResponse response = new PaymentGatewayResponse();
+        response.setSuccess(true);
+        response.setExternalPaymentId("DEMO-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        response.setStatus("pending");
+        
+        // QR Code PIX simulado (formato EMV)
+        String pixCode = String.format(
+            "00020126580014br.gov.bcb.pix0136%s5204000053039865406%.2f5802BR5925PORTAL DO CHURRAS DEMO6009SAO PAULO62070503***6304",
+            UUID.randomUUID().toString(),
+            request.getAmount().doubleValue()
+        ).replace(",", ".");
+        
+        response.setQrCode(pixCode);
+        
+        // QR Code Base64 - imagem PNG simples de demonstração
+        // Esta é uma imagem placeholder pequena
+        response.setQrCodeBase64("iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAAACtWK6eAAABhGlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw0AcxV9TpSIVBzuIOGSoThZERRy1CkWoEGqFVh1MLv2CJg1Jiouj4Fpw8GOx6uDirKuDqyAIfoC4uTkpukiJ/0sKLWI8OO7Hu3uPu3eA0Kgy1eyZAFTNMlLxmJjNrYqBV/gxjAGEEZWYqSfTixl4jq97+Ph6F+FZ3uf+HP1K3mSATySeY7phEW8Qz2xaOud94jArSQrxOfGEQRckfuS67PIb56LDAs8MG5n0PHGYWCx2sNzBrGSoxFPEUUXVKF/Iuqxw3uKsVmqsdU/+wmBeW1nmOs0RxLGEBJIQIaOGMiqwEKVVI8VEms5jHv6Rxp8kLplcZTByLKAKFZLjB/+D392ahckJNymcAHpfbPsjCgR2gVbDtr+Pbbt1AvifgSut4681gdlP0hsdLXoEDGwDF9cdTd4DLneA4SddMiRH8tMUikXg/Yy+KQcM3gK9a25vrX2cPgBp6ip5AxwcAmMlyl73eHdfd2//nmn39wO2VXLP");
+        
+        response.setTicketUrl("https://portalchurras.demo/pix/" + response.getExternalPaymentId());
+        
+        Map<String, Object> rawResponse = new HashMap<>();
+        rawResponse.put("id", response.getExternalPaymentId());
+        rawResponse.put("status", "pending");
+        rawResponse.put("demo_mode", true);
+        rawResponse.put("message", "Modo demonstração - PIX simulado");
+        response.setRawResponse(rawResponse);
+        
+        return response;
     }
 }

@@ -1,7 +1,7 @@
 # =========================================================
 # Docker Compose - Ambiente Completo Portal Churras
 # =========================================================
-# Inclui: Backend (2 réplicas), Frontend, PostgreSQL, 
+# Inclui: Backend (2 réplicas), Frontend, PostgreSQL,
 #         Redis, RabbitMQ, Nginx Load Balancer
 # =========================================================
 
@@ -111,7 +111,15 @@ services:
     networks:
       - portalchurras-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8080/actuator/health",
+        ]
       interval: 30s
       timeout: 10s
       start_period: 60s
@@ -150,7 +158,15 @@ services:
     networks:
       - portalchurras-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8080/actuator/health",
+        ]
       interval: 30s
       timeout: 10s
       start_period: 60s
@@ -175,7 +191,15 @@ services:
     networks:
       - portalchurras-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:80/health",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
