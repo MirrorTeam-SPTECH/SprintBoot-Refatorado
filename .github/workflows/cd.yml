@@ -1,0 +1,358 @@
+# =========================================================
+# Portal Churras - Continuous Deployment (CD)
+# =========================================================
+# Deploy usando Self-Hosted Runner no AWS Academy
+# O runner roda na EC2 JMeter e faz deploy via SSH
+# =========================================================
+
+name: Portal Churras CD
+
+on:
+  push:
+    branches: [main]
+  
+  # Permite executar manualmente
+  workflow_dispatch:
+    inputs:
+      deploy_backend:
+        description: 'Deploy Backend?'
+        required: true
+        default: true
+        type: boolean
+      deploy_frontend:
+        description: 'Deploy Frontend?'
+        required: true
+        default: true
+        type: boolean
+
+env:
+  APP_NAME: portalchurras
+  
+  # IPs das instâncias (serão sobrescritos pelos secrets ou outputs do Terraform)
+  BACKEND_1_IP: ${{ secrets.BACKEND_1_IP }}
+  BACKEND_2_IP: ${{ secrets.BACKEND_2_IP }}
+  FRONTEND_IP: ${{ secrets.FRONTEND_IP }}
+  DATABASE_IP: ${{ secrets.DATABASE_IP }}
+  CACHE_IP: ${{ secrets.CACHE_IP }}
+
+jobs:
+  # =========================================
+  # Build
+  # =========================================
+  build:
+    name: 🔨 Build
+    runs-on: self-hosted
+    
+    outputs:
+      backend_jar: ${{ steps.build-backend.outputs.jar_path }}
+      frontend_dist: ${{ steps.build-frontend.outputs.dist_path }}
+    
+    steps:
+      - name: 🔄 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 📋 Verificar ambiente
+        run: |
+          echo "=========================================="
+          echo "🖥️  Runner Info"
+          echo "=========================================="
+          echo "Hostname: $(hostname)"
+          echo "User: $(whoami)"
+          echo "PWD: $(pwd)"
+          echo "=========================================="
+
+      # =========================================
+      # BUILD BACKEND
+      # =========================================
+      - name: ☕ Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'corretto'
+          cache: maven
+
+      - name: 🔨 Build Backend
+        id: build-backend
+        run: |
+          echo "🔨 Compilando Backend..."
+          cd SprintBoot-Refatorado
+          chmod +x mvnw
+          ./mvnw clean package -DskipTests -B -q
+          
+          JAR_PATH=$(ls target/*.jar | grep -v original | head -1)
+          echo "✅ JAR: $JAR_PATH"
+          echo "jar_path=$JAR_PATH" >> $GITHUB_OUTPUT
+          
+          # Copiar JAR para diretório de deploy
+          mkdir -p /tmp/deploy
+          cp $JAR_PATH /tmp/deploy/app.jar
+          echo "✅ Backend build concluído!"
+
+      # =========================================
+      # BUILD FRONTEND
+      # =========================================
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 🔨 Build Frontend
+        id: build-frontend
+        run: |
+          echo "🔨 Compilando Frontend..."
+          cd Mirror-React/mirror-react
+          npm ci --silent
+          npm run build
+          
+          # Copiar dist para diretório de deploy
+          mkdir -p /tmp/deploy/frontend
+          cp -r dist/* /tmp/deploy/frontend/
+          echo "dist_path=/tmp/deploy/frontend" >> $GITHUB_OUTPUT
+          echo "✅ Frontend build concluído!"
+
+  # =========================================
+  # Deploy Backend
+  # =========================================
+  deploy-backend:
+    name: 🚀 Deploy Backend
+    needs: build
+    runs-on: self-hosted
+    if: ${{ github.event.inputs.deploy_backend != 'false' }}
+    
+    strategy:
+      matrix:
+        backend: [1, 2]
+      fail-fast: false
+    
+    steps:
+      - name: 🔄 Checkout (para scripts)
+        uses: actions/checkout@v4
+
+      - name: 📋 Determinar IP do Backend
+        id: get-ip
+        run: |
+          if [ "${{ matrix.backend }}" == "1" ]; then
+            echo "ip=${{ env.BACKEND_1_IP }}" >> $GITHUB_OUTPUT
+          else
+            echo "ip=${{ env.BACKEND_2_IP }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🚀 Deploy no Backend ${{ matrix.backend }}
+        env:
+          BACKEND_IP: ${{ steps.get-ip.outputs.ip }}
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          DB_HOST: ${{ env.DATABASE_IP }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          REDIS_HOST: ${{ env.CACHE_IP }}
+          RABBITMQ_HOST: ${{ env.CACHE_IP }}
+          RABBITMQ_USER: ${{ secrets.RABBITMQ_USER }}
+          RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: |
+          echo "🚀 Deploying to Backend ${{ matrix.backend }} ($BACKEND_IP)..."
+          
+          # Configurar SSH key
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          
+          # Adicionar host conhecido
+          ssh-keyscan -H $BACKEND_IP >> ~/.ssh/known_hosts 2>/dev/null
+          
+          # Copiar JAR
+          echo "📦 Copiando JAR..."
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            /tmp/deploy/app.jar \
+            ec2-user@$BACKEND_IP:/tmp/app.jar
+          
+          # Executar deploy no servidor
+          echo "⚙️ Executando deploy..."
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ec2-user@$BACKEND_IP << 'ENDSSH'
+            set -e
+            
+            echo "🛑 Parando aplicação atual..."
+            sudo pkill -f 'java.*app.jar' || true
+            sleep 5
+            
+            echo "📁 Preparando diretórios..."
+            sudo mkdir -p /app/config
+            sudo mkdir -p /app/backup
+            
+            # Backup do JAR anterior
+            if [ -f /app/app.jar ]; then
+              sudo cp /app/app.jar /app/backup/app.jar.$(date +%Y%m%d%H%M%S)
+            fi
+            
+            # Mover novo JAR
+            sudo cp /tmp/app.jar /app/app.jar
+            sudo chown ec2-user:ec2-user /app/app.jar
+            
+            echo "🚀 Iniciando aplicação..."
+            cd /app
+            nohup java -Xmx512m -Xms256m \
+              -Dspring.profiles.active=prod \
+              -jar /app/app.jar > /var/log/backend.log 2>&1 &
+            
+            echo "⏳ Aguardando inicialização..."
+            sleep 45
+            
+            # Health check
+            for i in {1..10}; do
+              if curl -sf http://localhost:8080/actuator/health > /dev/null 2>&1; then
+                echo "✅ Backend está saudável!"
+                exit 0
+              fi
+              echo "Tentativa $i/10..."
+              sleep 10
+            done
+            
+            echo "❌ Health check falhou"
+            tail -100 /var/log/backend.log
+            exit 1
+          ENDSSH
+          
+          echo "✅ Deploy no Backend ${{ matrix.backend }} concluído!"
+
+  # =========================================
+  # Deploy Frontend
+  # =========================================
+  deploy-frontend:
+    name: 🎨 Deploy Frontend
+    needs: build
+    runs-on: self-hosted
+    if: ${{ github.event.inputs.deploy_frontend != 'false' }}
+    
+    steps:
+      - name: 🔄 Checkout (para scripts)
+        uses: actions/checkout@v4
+
+      - name: 🚀 Deploy no Frontend
+        env:
+          FRONTEND_IP: ${{ env.FRONTEND_IP }}
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          echo "🚀 Deploying Frontend to $FRONTEND_IP..."
+          
+          # Configurar SSH key
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          
+          # Adicionar host conhecido
+          ssh-keyscan -H $FRONTEND_IP >> ~/.ssh/known_hosts 2>/dev/null
+          
+          # Compactar frontend para transferência
+          echo "📦 Compactando frontend..."
+          cd /tmp/deploy
+          tar -czf frontend.tar.gz -C frontend .
+          
+          # Copiar para o servidor
+          echo "📤 Transferindo arquivos..."
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            frontend.tar.gz \
+            ec2-user@$FRONTEND_IP:/tmp/frontend.tar.gz
+          
+          # Executar deploy no servidor
+          echo "⚙️ Executando deploy..."
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ec2-user@$FRONTEND_IP << 'ENDSSH'
+            set -e
+            
+            echo "📁 Preparando diretórios..."
+            sudo mkdir -p /app/html
+            sudo mkdir -p /app/backup
+            
+            # Backup do frontend anterior
+            if [ -d /app/html ] && [ "$(ls -A /app/html)" ]; then
+              sudo tar -czf /app/backup/html.$(date +%Y%m%d%H%M%S).tar.gz -C /app/html .
+            fi
+            
+            # Extrair novo frontend
+            echo "📂 Extraindo arquivos..."
+            sudo rm -rf /app/html/*
+            sudo tar -xzf /tmp/frontend.tar.gz -C /app/html
+            sudo chown -R nginx:nginx /app/html 2>/dev/null || sudo chown -R ec2-user:ec2-user /app/html
+            
+            # Recarregar Nginx (se estiver rodando)
+            if systemctl is-active --quiet nginx; then
+              echo "🔄 Recarregando Nginx..."
+              sudo nginx -t && sudo systemctl reload nginx
+            elif docker ps | grep -q nginx; then
+              echo "🔄 Recarregando Nginx (Docker)..."
+              docker exec $(docker ps -q -f name=nginx) nginx -s reload || true
+            fi
+            
+            # Health check
+            echo "🏥 Verificando..."
+            if curl -sf http://localhost/health > /dev/null 2>&1 || curl -sf http://localhost/ > /dev/null 2>&1; then
+              echo "✅ Frontend está saudável!"
+            else
+              echo "⚠️ Health check não passou, mas arquivos foram atualizados"
+            fi
+            
+            rm /tmp/frontend.tar.gz
+          ENDSSH
+          
+          echo "✅ Deploy do Frontend concluído!"
+
+  # =========================================
+  # Verificação Final
+  # =========================================
+  verify:
+    name: ✅ Verificação
+    needs: [deploy-backend, deploy-frontend]
+    runs-on: self-hosted
+    if: always() && (needs.deploy-backend.result == 'success' || needs.deploy-frontend.result == 'success')
+    
+    steps:
+      - name: 📊 Status do Deploy
+        run: |
+          echo "=========================================="
+          echo "📊 Resumo do Deploy"
+          echo "=========================================="
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Timestamp: $(date)"
+          echo ""
+          echo "Backend 1: ${{ env.BACKEND_1_IP }}"
+          echo "Backend 2: ${{ env.BACKEND_2_IP }}"
+          echo "Frontend: ${{ env.FRONTEND_IP }}"
+          echo "=========================================="
+
+      - name: 🏥 Health Check - Backend 1
+        if: ${{ env.BACKEND_1_IP != '' }}
+        continue-on-error: true
+        run: |
+          echo "Verificando Backend 1..."
+          curl -sf http://${{ env.BACKEND_1_IP }}:8080/actuator/health && echo "✅ OK" || echo "❌ FALHOU"
+
+      - name: 🏥 Health Check - Backend 2
+        if: ${{ env.BACKEND_2_IP != '' }}
+        continue-on-error: true
+        run: |
+          echo "Verificando Backend 2..."
+          curl -sf http://${{ env.BACKEND_2_IP }}:8080/actuator/health && echo "✅ OK" || echo "❌ FALHOU"
+
+      - name: 🏥 Health Check - Frontend
+        if: ${{ env.FRONTEND_IP != '' }}
+        continue-on-error: true
+        run: |
+          echo "Verificando Frontend..."
+          curl -sf http://${{ env.FRONTEND_IP }}/ && echo "✅ OK" || echo "❌ FALHOU"
+
+      - name: 📝 Salvar log do deploy
+        run: |
+          mkdir -p ~/deploys
+          cat > ~/deploys/last-deploy.json << EOF
+          {
+            "commit": "${{ github.sha }}",
+            "branch": "${{ github.ref_name }}",
+            "actor": "${{ github.actor }}",
+            "timestamp": "$(date -Iseconds)",
+            "backend_status": "${{ needs.deploy-backend.result }}",
+            "frontend_status": "${{ needs.deploy-frontend.result }}"
+          }
+          EOF
+          cat ~/deploys/last-deploy.json
