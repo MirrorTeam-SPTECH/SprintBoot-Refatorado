@@ -75,7 +75,6 @@ jobs:
         id: build-backend
         run: |
           echo "🔨 Compilando Backend..."
-          cd SprintBoot-Refatorado
           chmod +x mvnw
           ./mvnw clean package -DskipTests -B -q
           
@@ -99,16 +98,10 @@ jobs:
       - name: 🔨 Build Frontend
         id: build-frontend
         run: |
-          echo "🔨 Compilando Frontend..."
-          cd Mirror-React/mirror-react
-          npm ci --silent
-          npm run build
-          
-          # Copiar dist para diretório de deploy
+          echo "⚠️ Frontend está em repositório separado (Mirror-React)"
+          echo "Pulando build do frontend neste workflow..."
           mkdir -p /tmp/deploy/frontend
-          cp -r dist/* /tmp/deploy/frontend/
           echo "dist_path=/tmp/deploy/frontend" >> $GITHUB_OUTPUT
-          echo "✅ Frontend build concluído!"
 
   # =========================================
   # Deploy Backend
@@ -140,7 +133,7 @@ jobs:
       - name: 🚀 Deploy no Backend ${{ matrix.backend }}
         env:
           BACKEND_IP: ${{ steps.get-ip.outputs.ip }}
-          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
           DB_HOST: ${{ env.DATABASE_IP }}
           DB_NAME: ${{ secrets.DB_NAME }}
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
@@ -231,7 +224,7 @@ jobs:
       - name: 🚀 Deploy no Frontend
         env:
           FRONTEND_IP: ${{ env.FRONTEND_IP }}
-          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
         run: |
           echo "🚀 Deploying Frontend to $FRONTEND_IP..."
           
