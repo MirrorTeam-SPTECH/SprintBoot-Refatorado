@@ -186,7 +186,7 @@ jobs:
             
             # Exportar variáveis de ambiente
             export DB_URL="jdbc:postgresql://10.0.10.234:5432/portalchurras"
-            export DB_USERNAME="postgres"
+            export DB_USERNAME="admin"
             export DB_PASSWORD='Admin123!@#'
             export REDIS_HOST="10.0.10.106"
             export REDIS_PORT="6379"
@@ -200,7 +200,7 @@ jobs:
             nohup java -Xmx512m -Xms256m \
               -Dspring.profiles.active=prod \
               -Dspring.datasource.url="$DB_URL" \
-              -Dspring.datasource.username="$DB_USERNAME" \
+              -Dspring.datasource.username="admin" \
               -Dspring.datasource.password='Admin123!@#' \
               -Dspring.redis.host="$REDIS_HOST" \
               -Dspring.redis.port="$REDIS_PORT" \
